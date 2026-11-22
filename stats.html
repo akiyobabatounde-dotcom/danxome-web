@@ -1,0 +1,20 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Danxomè · Statistiques</title>
+<style>body{font-family:system-ui,sans-serif;background:#14110f;color:#f3ead8;max-width:760px;margin:0 auto;padding:18px}h1,h2{color:#f0b429}input,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #555;background:#0f0c0a;color:#f3ead8}button{background:#f0b429;color:#14110f;font-weight:800;border:0}table{width:100%;border-collapse:collapse;margin:8px 0 18px}td,th{border-bottom:1px solid #333;padding:6px;text-align:left}.big{font-size:34px;font-weight:900;color:#f0b429}</style></head>
+<body><h1>📊 Danxomè · Statistiques</h1>
+<p><input id="k" type="password" placeholder="Clé d'administration" style="width:65%"> <button id="go">Afficher</button></p>
+<div id="out"></div>
+<script>
+const LBL={open:'Ouvertures du jeu',mission_start:'Missions commencées',mission_win:'Missions réussies',mission_loss:'Missions perdues',battle_win:'Batailles gagnées',battle_loss:'Batailles perdues',inf_end:'Parties de la Garde éternelle',daily_end:'Défis du jour joués',profile:'Profils créés',season_end:'Saisons terminées'};
+const k=document.getElementById('k');try{k.value=localStorage.getItem('dx_admin')||''}catch(e){}
+document.getElementById('go').onclick=async()=>{
+  try{localStorage.setItem('dx_admin',k.value)}catch(e){}
+  const r=await fetch('api.php?a=stats&key='+encodeURIComponent(k.value),{cache:'no-store'}).then(r=>r.json()).catch(()=>({ok:false,error:'connexion impossible'}));
+  const o=document.getElementById('out');if(!r.ok){o.textContent='Erreur : '+r.error;return}
+  const days={};r.par_jour.forEach(x=>{(days[x.day]=days[x.day]||{})[x.ev]=x.n});
+  o.innerHTML=`<div class="big">${r.joueurs} profils</div><div>${r.ouvertures_total} ouvertures du jeu au total</div>
+  <h2>Profils par ville</h2><table>${r.joueurs_par_ville.map(x=>`<tr><td>${x.city}</td><td>${x.n}</td></tr>`).join('')}</table>
+  <h2>Par jour (30 derniers jours)</h2><table><tr><th>Jour</th><th>Ouvertures</th><th>Missions réussies / perdues</th><th>Garde éternelle</th><th>Profils</th></tr>${Object.entries(days).map(([d,v])=>`<tr><td>${d}</td><td>${v.open||0}</td><td>${v.mission_win||0} / ${v.mission_loss||0}</td><td>${v.inf_end||0}</td><td>${v.profile||0}</td></tr>`).join('')}</table>
+  <h2>Missions et batailles</h2><table><tr><th>Mission</th><th>Évènement</th><th>Nombre</th></tr>${r.missions.map(x=>`<tr><td>${x.k}</td><td>${LBL[x.ev]||x.ev}</td><td>${x.n}</td></tr>`).join('')}</table>`;
+};
+</script></body></html>
