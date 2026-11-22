@@ -1,0 +1,9 @@
+AddType application/manifest+json .webmanifest
+AddDefaultCharset UTF-8
+Options -Indexes
+<Files "sw.js">
+  Header set Cache-Control "no-cache"
+</Files>
+<Files "index.html">
+  Header set Cache-Control "no-cache"
+</Files>

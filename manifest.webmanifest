@@ -1,0 +1,43 @@
+{
+ "name": "Danxomè : L'Héritage des Rois",
+ "short_name": "Danxomè",
+ "description": "Jeu de stratégie sur l'histoire des rois du Danxomè (Bénin).",
+ "start_url": "/index.html",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#14110f",
+ "theme_color": "#14110f",
+ "lang": "fr",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  },
+  {
+   "src": "icon.svg",
+   "sizes": "any",
+   "type": "image/svg+xml",
+   "purpose": "any"
+  }
+ ],
+ "id": "/",
+ "scope": "/",
+ "categories": [
+  "games",
+  "education"
+ ]
+}
