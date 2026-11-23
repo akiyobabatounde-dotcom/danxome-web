@@ -6,6 +6,12 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
+// Fichier de vérification Android (Digital Asset Links) servi pour /.well-known/assetlinks.json (voir .htaccess)
+if (isset($_GET['assetlinks'])) {
+  header('Cache-Control: public, max-age=3600');
+  echo '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.blessmax.danxome","sha256_cert_fingerprints":["5A:43:ED:8E:70:1E:FF:63:4C:A8:BB:A1:0F:1F:30:06:A6:1A:BC:B6:2C:05:47:C0:A3:FC:12:AF:DE:E8:D2:B1"]}}]';
+  exit;
+}
 const ADMIN_HASH='ec28624708b371a786f6a28c2543b7bdf590674ae68524130e7d9c940849a60c';
 const CITIES=['Abomey','Cotonou','Porto-Novo','Ouidah','Parakou','Abomey-Calavi','Bohicon','Natitingou','Djougou','Lokossa','Kandi','Savalou','Dassa-Zoumè','Comè','Allada','Pobè','Malanville','Savè','Kétou','Grand-Popo','Autre ville','Hors du Bénin'];
 const EVENTS=['open','mission_start','mission_win','mission_loss','battle_win','battle_loss','inf_end','daily_end','profile','season_end'];
