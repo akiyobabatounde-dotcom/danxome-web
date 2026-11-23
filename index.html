@@ -10,4 +10,45 @@ return r;};
 var _hp=howPages;
 howPages=function(k){var p=_hp.apply(this,arguments);try{if(k!=='cour'&&Array.isArray(p)&&!(typeof M!=='undefined'&&M&&M.arena)){p.push({t:'Équipe et pièges',pic:'<div style="font-size:42px;line-height:1">🤝 🪤</div>',p:'Reste groupée. Frapper une cible qu\'une alliée touche déjà donne +1. Une unité sans alliée à 2 cases est isolée : elle prend +1 dégât. Entourée d\'au moins 2 alliées, elle prend −1. Pièges : l\'ennemi en cache sur le terrain. Un point rouge « ! » les signale quand une unité est à côté (à 2 cases pour les Agojié et les archers). Une unité voisine peut le désamorcer : cela prend son action. Tes Agojié peuvent aussi poser leurs pièges avec le bouton 🪤.'});}}catch(e){}return p;};
 var tip=$('tip'),tmr=null;if(tip&&window.MutationObserver){new MutationObserver(function(){clearTimeout(tmr);if(tip.classList.contains('on'))tmr=setTimeout(function(){if(tip.classList.contains('on'))tip.click();},8000);}).observe(tip,{attributes:true,attributeFilter:['class']});}
-}catch(e){}})();</script></body></html>
+}catch(e){}})();;(function(){try{
+var st=document.createElement('style');st.textContent='.fx3{position:absolute;inset:0;pointer-events:none;z-index:8;overflow:visible}.fx3e{position:absolute;pointer-events:none}.fx3e svg{width:100%;height:100%;display:block;overflow:visible}';document.head.appendChild(st);
+function is3d(){return !!document.querySelector('#gwrap.b3d')&&!!document.getElementById('spr');}
+function L(){var g=$('gwrap'),x=g.querySelector('.fx3');if(!x){x=document.createElement('div');x.className='fx3';g.appendChild(x);}return x;}
+function P(u){var p=cellPos(u.r,u.c);return {x:p.x,y:p.y-p.w*0.55,w:p.w};}
+function sprOf(u){return u&&u.id!=null?document.querySelector('#spr [data-id="'+u.id+'"]'):null;}
+function put(h,x,y,w,hh){var d=document.createElement('div');d.className='fx3e';d.style.cssText='left:'+(x-w/2)+'px;top:'+(y-hh/2)+'px;width:'+w+'px;height:'+hh+'px';d.innerHTML=h;L().appendChild(d);return d;}
+function flashHit(u){var s=sprOf(u);if(s)s.animate([{filter:'brightness(1)'},{filter:'brightness(2.3) saturate(.3)'},{filter:'brightness(1)'}],{duration:300});}
+function spark(u){var p=P(u),d=put('<svg viewBox="0 0 40 40"><path d="M20 2 L23 16 L38 20 L23 24 L20 38 L17 24 L2 20 L17 16Z" fill="#fff3c4"/></svg>',p.x,p.y,p.w*.75,p.w*.75);d.animate([{opacity:1,transform:'scale(.4)'},{opacity:0,transform:'scale(1.35)'}],{duration:320}).finished.then(function(){d.remove();});}
+var BLADE='<svg viewBox="0 0 60 60"><path d="M8 12 Q36 16 52 48" stroke="#cfe3ff" stroke-width="10" fill="none" stroke-linecap="round" opacity=".35"/><path d="M8 12 Q36 16 52 48" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/></svg>';
+var SPEAR='<svg viewBox="0 0 60 60"><path d="M4 56 L50 10" stroke="#cfe3ff" stroke-width="8" stroke-linecap="round" opacity=".35"/><path d="M4 56 L50 10" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M56 4 L44 10 L50 16Z" fill="#fff"/></svg>';
+function swing(u,kind,flip){var p=P(u),w=p.w*1.7,d=put(kind==='g'?SPEAR:BLADE,p.x,p.y,w,w),f=flip?'scaleX(-1) ':'';return d.animate([{opacity:0,transform:f+'scale(.55) rotate(-25deg)'},{opacity:1,transform:f+'scale(1) rotate(0)',offset:.4},{opacity:0,transform:f+'scale(1.15) rotate(12deg)'}],{duration:260,easing:'ease-out'}).finished.then(function(){d.remove();});}
+var _al=animLunge;
+animLunge=async function(a,b){if(!FX_SPEED)return;if(!is3d())return _al.apply(this,arguments);try{var s=sprOf(a),pa=cellPos(a.r,a.c),pb=cellPos(b.r,b.c),an=null;
+if(s)an=s.animate([{transform:'none'},{transform:'translate('+((pb.x-pa.x)*.5)+'px,'+((pb.y-pa.y)*.5)+'px) scale(1.08)',offset:.45},{transform:'none'}],{duration:440,easing:'ease-out'});
+await wait(170);var k=a.t==='g'?'g':'j';swing(b,k,false);if(a.t==='j'){setTimeout(function(){swing(b,'j',true);},120);}spark(b);flashHit(b);try{drum(false);}catch(e){}
+if(an)await an.finished;}catch(e){return _al.apply(this,arguments);}};
+var _aa=animArrow;
+animArrow=async function(a,b){if(!FX_SPEED)return;if(!is3d())return _aa.apply(this,arguments);try{var pa=P(a),pb=P(b),dx=pb.x-pa.x,dy0=pb.y-pa.y,dist=Math.hypot(dx,dy0),h=Math.max(28,dist*.35),s=sprOf(a);
+if(s)s.animate([{transform:'none'},{transform:'translateY(2px) scale(.96)'},{transform:'none'}],{duration:240});
+var kf=[];for(var i=0;i<=8;i++){var t=i/8,x=pa.x+dx*t,y=pa.y+dy0*t-h*4*t*(1-t),ang=Math.atan2(dy0-h*4*(1-2*t),dx)*180/Math.PI;kf.push({transform:'translate('+(x-15)+'px,'+(y-5)+'px) rotate('+ang+'deg)'});}
+var d=document.createElement('div');d.className='fx3e';d.style.cssText='left:0;top:0;width:30px;height:10px';d.innerHTML='<svg viewBox="0 0 40 10"><path d="M2 5 H32" stroke="#f3ead8" stroke-width="2.5"/><path d="M40 5 L30 1 L32 5 L30 9Z" fill="#cfd6dc"/><path d="M2 5 L-2 1 M2 5 L-2 9" stroke="#f0b429" stroke-width="2"/></svg>';L().appendChild(d);
+await d.animate(kf,{duration:Math.max(380,dist*2.6),easing:'linear'}).finished;d.remove();spark(b);flashHit(b);}catch(e){}};
+var _as=animShot;
+animShot=async function(a,b){if(!FX_SPEED||!is3d())return _as.apply(this,arguments);try{try{drum(false);}catch(e){}var pa=P(a),pb=P(b),dir=pb.x>=pa.x?1:-1,s=sprOf(a);
+var fl=put('<svg viewBox="0 0 40 40"><path d="M20 4 L24 16 L36 12 L27 21 L36 30 L23 26 L20 38 L17 26 L4 30 L13 21 L4 12 L16 16Z" fill="#ffc83a"/><circle cx="20" cy="21" r="6" fill="#fff6cc"/></svg>',pa.x+dir*pa.w*.3,pa.y-pa.w*.05,pa.w*.85,pa.w*.85);
+fl.animate([{opacity:1,transform:'scale(.5)'},{opacity:0,transform:'scale(1.45)'}],{duration:230}).finished.then(function(){fl.remove();});
+var sm=put('<svg viewBox="0 0 40 40"><circle cx="14" cy="22" r="10" fill="#d8d2c4"/><circle cx="26" cy="15" r="8" fill="#e8e2d6"/><circle cx="25" cy="27" r="7" fill="#cfc8b8"/></svg>',pa.x+dir*pa.w*.35,pa.y-pa.w*.1,pa.w,pa.w);
+sm.animate([{opacity:.95,transform:'scale(.5)'},{opacity:0,transform:'translateY(-'+(pa.w*.7)+'px) scale(1.9)'}],{duration:1200,easing:'ease-out'}).finished.then(function(){sm.remove();});
+if(s)s.animate([{transform:'none'},{transform:'translateX('+(-dir*5)+'px)'},{transform:'none'}],{duration:220});
+var ball=put('<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="3.5" fill="#222" stroke="#fff3c4" stroke-width="1.5"/></svg>',pa.x,pa.y,8,8);
+await ball.animate([{transform:'translate(0,0)'},{transform:'translate('+(pb.x-pa.x)+'px,'+(pb.y-pa.y)+'px)'}],{duration:170,easing:'linear'}).finished;ball.remove();
+var pf=put('<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="12" fill="#cfc8b8"/></svg>',pb.x,pb.y,pb.w*.7,pb.w*.7);pf.animate([{opacity:.9,transform:'scale(.4)'},{opacity:0,transform:'scale(1.6)'}],{duration:480}).finished.then(function(){pf.remove();});flashHit(b);}catch(e){}};
+var _s3=sprite3;
+sprite3=function(u){try{if(u&&u.side==='p'&&(u.t==='f'||u.t==='a')){var n=0,real=u.t,px=Object.create(u);Object.defineProperty(px,'t',{get:function(){return n++===0?'j':real;}});return _s3(px);}}catch(e){}return _s3.apply(this,arguments);};
+var PN={j:['Agojié au coupe-coupe','Guerrières d\'élite du corps à corps : coupe-coupe et grand rasoir. Rapides et redoutables.'],f:['Agojié fusilières','Les Gulohento, le plus grand régiment : mousquet à silex, frappent fort à 2 cases, fragiles au corps à corps.'],a:['Agojié archères','Tirent de loin (3 cases), fragiles au corps à corps.']};
+var _si=selInfo;
+selInfo=function(u){var h=_si.apply(this,arguments);try{if(u&&u.side==='p'&&PN[u.t]&&UT[u.t]){h=h.replace('<b>'+UT[u.t].n+'</b>','<b>'+PN[u.t][0]+'</b>').replace(UT[u.t].d,PN[u.t][1]);}}catch(e){}return h;};
+var _um=unitMini;
+unitMini=function(t,s){var h=_um.apply(this,arguments);if(s!=='e'&&typeof h==='string'){h=h.replace('Fusiliers</div>','Fusilières</div>').replace('Archers</div>','Archères</div>');}return h;};
+}catch(e){}})();
+</script></body></html>
