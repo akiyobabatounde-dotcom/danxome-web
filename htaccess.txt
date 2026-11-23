@@ -7,3 +7,6 @@ Options -Indexes
 <Files "index.html">
   Header set Cache-Control "no-cache"
 </Files>
+# Vérification Android (Digital Asset Links)
+RewriteEngine On
+RewriteRule ^\.well-known/assetlinks\.json$ api.php?assetlinks=1 [L]
