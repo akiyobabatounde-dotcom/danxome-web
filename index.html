@@ -94,4 +94,16 @@ window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();dp=
 window.addEventListener('appinstalled',function(){var b=document.getElementById('bInstall');if(b)b.remove();close();});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();
 }catch(e){}})();
-</script></body></html>
+</script><script>/* Voix de la griotte (fichiers audio) */
+(function(){try{
+var BASE='/voix/', MAP=null, cur=null;
+function norm(t){return String(t).replace(/[«»]/g,'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\s+/g,' ').trim();}
+fetch(BASE+'index.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null;}).then(function(j){MAP=j||{};}).catch(function(){MAP={};});
+var oSay=window.say, oHush=window.hush;
+if(typeof oSay!=='function'||typeof oHush!=='function') return;
+window.say=function(t){try{ if(!VOICE.on) return; var f=MAP&&MAP[norm(t)]; if(f){ try{speechSynthesis.cancel();}catch(e){} if(cur){cur.pause();} var a=new Audio(BASE+f); cur=a; a.onerror=function(){if(cur===a){cur=null;oSay(t);}}; var p=a.play(); if(p&&p.catch)p.catch(function(){if(cur===a){cur=null;oSay(t);}}); return;} }catch(e){} return oSay(t);};
+window.hush=function(){try{if(cur){cur.pause();cur=null;}}catch(e){} return oHush.apply(this,arguments);};
+window.__griotte=function(){return {map:MAP?Object.keys(MAP).length:null, wrapped:window.say!==oSay};};
+}catch(e){}})();
+</script>
+</body></html>
