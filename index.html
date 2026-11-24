@@ -78,12 +78,11 @@ document.body.appendChild(o);
 document.getElementById('dxInstOk').onclick=close;
 }
 function add(){
-var ref=document.getElementById('bReplayOpen');
-if(!ref||document.getElementById('bInstall'))return;
-var row=ref.parentNode;
+var row=document.querySelector('#sHome .sub');
+if(!row||document.getElementById('bInstall'))return;
 var b=document.createElement('button');
 b.className='btn';b.id='bInstall';b.type='button';
-b.style.cssText='margin-top:8px;width:100%;padding:10px;font-size:15px';
+b.style.cssText='margin:10px auto 4px;width:100%;max-width:340px;padding:10px;font-size:15px;display:block';
 b.textContent='📲 Installer le jeu sur mon téléphone';
 row.parentNode.insertBefore(b,row.nextSibling);
 b.onclick=function(){
