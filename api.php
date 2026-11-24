@@ -6,6 +6,9 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
+// CORS : autorise le jeu servi depuis jeudanxome.com (GitHub Pages)
+$o=$_SERVER['HTTP_ORIGIN']??'';if(in_array($o,['https://jeudanxome.com','https://www.jeudanxome.com'],true)){header('Access-Control-Allow-Origin: '.$o);header('Vary: Origin');header('Access-Control-Allow-Methods: GET, POST, OPTIONS');header('Access-Control-Allow-Headers: Content-Type');header('Access-Control-Max-Age: 86400');}
+if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;}
 // Fichier de vérification Android (Digital Asset Links) servi pour /.well-known/assetlinks.json (voir .htaccess)
 if (isset($_GET['assetlinks'])) {
   header('Cache-Control: public, max-age=3600');
