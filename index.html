@@ -96,7 +96,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 }catch(e){}})();
 </script><script>/* Voix de la griotte (fichiers audio) */
 (function(){try{
-var BASE='/voix/', MAP=null, cur=null;
+var BASE='https://jeudanxome.com/voix/', MAP=null, cur=null;
 function norm(t){return String(t).replace(/[«»]/g,'').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu,'').replace(/\s+/g,' ').trim();}
 fetch(BASE+'index.json',{cache:'no-cache'}).then(function(r){return r.ok?r.json():null;}).then(function(j){MAP=j||{};}).catch(function(){MAP={};});
 var oSay=window.say, oHush=window.hush;
