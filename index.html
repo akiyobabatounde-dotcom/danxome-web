@@ -106,4 +106,23 @@ window.hush=function(){try{if(cur){cur.pause();cur=null;}}catch(e){} return oHus
 window.__griotte=function(){return {map:MAP?Object.keys(MAP).length:null, wrapped:window.say!==oSay};};
 }catch(e){}})();
 </script>
+<script>/* Profil obligatoire avant de jouer */
+(function(){try{
+if(typeof getProf!=='function'||typeof openProf!=='function') return;
+var home=document.getElementById('sHome'), modal=document.getElementById('pfModal');
+if(!home||!modal) return;
+function need(){ try{ return !getProf() && navigator.onLine!==false; }catch(e){ return false; } }
+function lock(){
+  var box=document.getElementById('pfBox'); if(!box) return;
+  var c=document.getElementById('pfClose'); if(c) c.style.display='none';
+  var ps=box.querySelectorAll('p'); for(var i=0;i<ps.length;i++){ if(/facultatif/.test(ps[i].innerHTML)){ ps[i].innerHTML='Avant de commencer, choisis ton <b>pseudo</b> et ta <b>ville</b>. Ils servent pour le <b>classement</b> et pour <b>sauvegarder ta partie</b>. Aucune autre information n\'est demandée.'; break; } }
+  var h=box.querySelector('h2,h3,.ttl,b'); 
+}
+function check(){ if(!need()) return; if(!home.classList.contains('on')) return; if(!modal.classList.contains('on')) openProf(); setTimeout(lock,0); }
+new MutationObserver(check).observe(home,{attributes:true,attributeFilter:['class']});
+new MutationObserver(function(){ if(need()&&modal.classList.contains('on')) setTimeout(lock,0); else if(need()&&!modal.classList.contains('on')) setTimeout(check,50); }).observe(modal,{attributes:true,attributeFilter:['class']});
+document.getElementById('pfBox')&&new MutationObserver(function(){ if(need()) lock(); }).observe(document.getElementById('pfBox'),{childList:true});
+check();
+}catch(e){}})();
+</script>
 </body></html>
