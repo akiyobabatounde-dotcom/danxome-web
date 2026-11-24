@@ -114,7 +114,7 @@ if(!home||!modal) return;
 function need(){ try{ return !getProf() && navigator.onLine!==false; }catch(e){ return false; } }
 function lock(){
   var box=document.getElementById('pfBox'); if(!box) return;
-  var c=document.getElementById('pfClose'); if(c) c.style.display='none';
+  var c=document.getElementById('pfClose'); if(c){ if(/Récupérer ma partie/.test(box.textContent)){ c.style.display=''; c.textContent='← Retour'; c.onclick=function(e){ e.preventDefault(); openProf(); setTimeout(lock,0); }; } else c.style.display='none'; }
   var ps=box.querySelectorAll('p'); for(var i=0;i<ps.length;i++){ if(/facultatif/.test(ps[i].innerHTML)){ ps[i].innerHTML='Avant de commencer, choisis ton <b>pseudo</b> et ta <b>ville</b>. Ils servent pour le <b>classement</b> et pour <b>sauvegarder ta partie</b>. Aucune autre information n\'est demandée.'; break; } }
   var h=box.querySelector('h2,h3,.ttl,b'); 
 }
