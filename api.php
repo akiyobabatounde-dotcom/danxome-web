@@ -15,7 +15,9 @@ if (isset($_GET['assetlinks'])) {
   echo '[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.blessmax.danxome","sha256_cert_fingerprints":["5A:43:ED:8E:70:1E:FF:63:4C:A8:BB:A1:0F:1F:30:06:A6:1A:BC:B6:2C:05:47:C0:A3:FC:12:AF:DE:E8:D2:B1"]}}]';
   exit;
 }
-const ADMIN_HASH='ec28624708b371a786f6a28c2543b7bdf590674ae68524130e7d9c940849a60c';
+// Clé admin : empreinte stockée hors du dépôt public (fichier data/admin.hash sur le serveur)
+$__ah=@file_get_contents(dirname(__DIR__).'/data/admin.hash');
+define('ADMIN_HASH',($__ah&&preg_match('/^[a-f0-9]{64}$/',trim($__ah)))?trim($__ah):str_repeat('0',64));
 const CITIES=['Abomey','Cotonou','Porto-Novo','Ouidah','Parakou','Abomey-Calavi','Bohicon','Natitingou','Djougou','Lokossa','Kandi','Savalou','Dassa-Zoumè','Comè','Allada','Pobè','Malanville','Savè','Kétou','Grand-Popo','Autre ville','Hors du Bénin'];
 const EVENTS=['open','mission_start','mission_win','mission_loss','battle_win','battle_loss','inf_end','daily_end','profile','season_end'];
 function out($a,$code=200){http_response_code($code);echo json_encode($a,JSON_UNESCAPED_UNICODE);exit;}
@@ -96,6 +98,24 @@ case 'stats':
   $r['par_jour']=$db->query("SELECT day,ev,SUM(n) n FROM stats WHERE day>=date('now','-30 day') GROUP BY day,ev ORDER BY day DESC,ev")->fetchAll(PDO::FETCH_ASSOC);
   $r['missions']=$db->query("SELECT ev,k,SUM(n) n FROM stats WHERE ev IN ('mission_win','mission_loss','battle_win','battle_loss') GROUP BY ev,k ORDER BY k,ev")->fetchAll(PDO::FETCH_ASSOC);
   $r['ouvertures_total']=(int)$db->query("SELECT COALESCE(SUM(n),0) FROM stats WHERE ev='open'")->fetchColumn();
+  out($r);
+case 'admin':
+  if(!hash_equals(ADMIN_HASH,hash('sha256',(string)($in['key']??''))))fail('clé invalide',403);
+  $T="'unixepoch','+1 hour'"; // heure du Bénin
+  $r=['ok'=>true,'now'=>time()];
+  $r['joueurs']=(int)$db->query("SELECT COUNT(*) FROM players")->fetchColumn();
+  $r['avec_sauvegarde']=(int)$db->query("SELECT COUNT(*) FROM players WHERE save_at IS NOT NULL")->fetchColumn();
+  $r['actifs_7j']=(int)$db->query("SELECT COUNT(*) FROM players WHERE save_at>=".(time()-7*86400))->fetchColumn();
+  $r['aujourdhui']=(int)$db->query("SELECT COUNT(*) FROM players WHERE date(created,$T)=date('now','+1 hour')")->fetchColumn();
+  $r['inscrits_par_jour']=$db->query("SELECT date(created,$T) day,COUNT(*) n FROM players GROUP BY day ORDER BY day")->fetchAll(PDO::FETCH_ASSOC);
+  $r['villes']=$db->query("SELECT city,COUNT(*) n FROM players GROUP BY city ORDER BY n DESC")->fetchAll(PDO::FETCH_ASSOC);
+  $r['activite_par_jour']=$db->query("SELECT day,ev,SUM(n) n FROM stats WHERE day>=date('now','-60 day') GROUP BY day,ev ORDER BY day")->fetchAll(PDO::FETCH_ASSOC);
+  $r['totaux']=$db->query("SELECT ev,SUM(n) n FROM stats GROUP BY ev")->fetchAll(PDO::FETCH_KEY_PAIR);
+  $r['missions']=$db->query("SELECT k,ev,SUM(n) n FROM stats WHERE ev IN ('mission_start','mission_win','mission_loss','battle_win','battle_loss') GROUP BY k,ev ORDER BY k")->fetchAll(PDO::FETCH_ASSOC);
+  $r['classement_inf']=$db->query("SELECT p.pseudo,p.city,s.value,s.at FROM scores s JOIN players p ON p.id=s.player WHERE s.mode='inf' ORDER BY s.value DESC,s.at ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
+  $r['classement_jour']=$db->query("SELECT p.pseudo,p.city,s.value,s.period FROM scores s JOIN players p ON p.id=s.player WHERE s.mode='jour' AND s.period=(SELECT MAX(period) FROM scores WHERE mode='jour') ORDER BY s.value DESC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
+  // liste des joueurs : jamais le jeton ni le code de sauvegarde
+  $r['liste']=$db->query("SELECT p.pseudo,p.city,p.created,p.save_at,(SELECT value FROM scores WHERE player=p.id AND mode='inf') inf,(SELECT COUNT(*) FROM scores WHERE player=p.id AND mode='jour') defis FROM players p ORDER BY p.created DESC LIMIT 5000")->fetchAll(PDO::FETCH_ASSOC);
   out($r);
 default: fail('action inconnue',404);
 }
