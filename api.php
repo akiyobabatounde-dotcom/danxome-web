@@ -29,7 +29,12 @@ CREATE TABLE IF NOT EXISTS players(id TEXT PRIMARY KEY,token TEXT,code TEXT UNIQ
 CREATE TABLE IF NOT EXISTS scores(player TEXT,mode TEXT,period TEXT,value INTEGER,at INTEGER,PRIMARY KEY(player,mode,period));
 CREATE INDEX IF NOT EXISTS sc_top ON scores(mode,period,value DESC);
 CREATE TABLE IF NOT EXISTS stats(day TEXT,ev TEXT,k TEXT,n INTEGER,PRIMARY KEY(day,ev,k));
-CREATE TABLE IF NOT EXISTS rate(h TEXT,m INTEGER,n INTEGER,PRIMARY KEY(h,m));");
+CREATE TABLE IF NOT EXISTS rate(h TEXT,m INTEGER,n INTEGER,PRIMARY KEY(h,m));
+CREATE TABLE IF NOT EXISTS runs(rid TEXT PRIMARY KEY,player TEXT,started INTEGER,ended INTEGER,value INTEGER,waves TEXT,s1 INTEGER,flag TEXT);
+CREATE INDEX IF NOT EXISTS runs_p ON runs(player,started);");
+// Défi 5 000 F : du ven. 27 nov. 2026 12h au dim. 6 déc. 2026 21h (heure du Bénin)
+const DEFI_START=1795777200;const DEFI_END=1796587200;const DEFI_MIN_S=8; // secondes minimum par vague
+function s1done($save){$d=json_decode((string)$save,true);if(!is_array($d))return false;$a=json_decode((string)($d['danxome_succes']??''),true);return is_array($a)&&!empty($a['saison']);}
 // limitation de débit : 90 requêtes par minute et par appareil (IP hachée, jamais stockée en clair)
 $m=intdiv(time(),60);$h=hash('sha256',($_SERVER['REMOTE_ADDR']??'').'|'.date('Y-m-d').'|danxome');
 $db->prepare("INSERT INTO rate(h,m,n) VALUES(?,?,1) ON CONFLICT(h,m) DO UPDATE SET n=n+1")->execute([$h,$m]);
@@ -61,7 +66,24 @@ case 'city':
   $db->prepare("UPDATE players SET city=? WHERE id=?")->execute([$c,$p['id']]);out(['ok'=>true]);
 case 'score':
   $p=auth($db,$in);$mode=(string)($in['mode']??'');$v=(int)($in['value']??0);$per=(string)($in['period']??'all');
-  if($mode==='inf'){if($v<0||$v>400)fail('score invalide');$per='all';}
+  if($mode==='inf'){if($v<0||$v>400)fail('score invalide');$per='all';
+    // partie de la Garde éternelle enregistrée dans l'historique (chronométrée par le serveur)
+    $rid=(string)($in['rid']??'');
+    if(preg_match('/^[a-f0-9]{24}$/',$rid)){
+      $q=$db->prepare("SELECT * FROM runs WHERE rid=? AND player=? AND ended IS NULL");$q->execute([$rid,$p['id']]);$r=$q->fetch(PDO::FETCH_ASSOC);
+      if($r){$now=time();$dur=$now-(int)$r['started'];$s1=s1done($p['save'])||!empty($in['s1']);
+        $w=$in['waves']??[];$w=is_array($w)?array_slice(array_map('intval',$w),0,400):[];
+        $flag='';
+        if((int)$r['started']<DEFI_START||$now>DEFI_END)$flag='hors_periode';
+        elseif(!$s1)$flag='saison1';
+        elseif($v>0&&$dur<$v*DEFI_MIN_S)$flag='trop_rapide';
+        $db->prepare("UPDATE runs SET ended=?,value=?,waves=?,s1=?,flag=? WHERE rid=?")->execute([$now,$v,json_encode($w),$s1?1:0,$flag,$rid]);
+        if($flag===''&&$v>0)$db->prepare("INSERT INTO scores(player,mode,period,value,at) VALUES(?,'defi','d1',?,?) ON CONFLICT(player,mode,period) DO UPDATE SET value=excluded.value,at=excluded.at WHERE excluded.value>scores.value")->execute([$p['id'],$v,$now]);
+        $db->prepare("INSERT INTO scores(player,mode,period,value,at) VALUES(?,?,?,?,?) ON CONFLICT(player,mode,period) DO UPDATE SET value=excluded.value,at=excluded.at WHERE excluded.value>scores.value")->execute([$p['id'],'inf','all',$v,time()]);
+        out(['ok'=>true,'defi'=>$flag===''?'ok':$flag,'dur'=>$dur]);
+      }
+    }
+  }
   elseif($mode==='jour'){if($v<0||$v>3000||!preg_match('/^\d{1,8}$/',$per))fail('score invalide');}
   else fail('mode inconnu');
   $db->prepare("INSERT INTO scores(player,mode,period,value,at) VALUES(?,?,?,?,?) ON CONFLICT(player,mode,period) DO UPDATE SET value=excluded.value,at=excluded.at WHERE excluded.value>scores.value")->execute([$p['id'],$mode,$per,$v,time()]);
@@ -79,6 +101,36 @@ case 'top':
   }
   $t=$db->prepare("SELECT COUNT(*) FROM scores WHERE mode=? AND period=?");$t->execute([$mode,$per]);
   out(['ok'=>true,'top'=>$q->fetchAll(PDO::FETCH_ASSOC),'me'=>$me,'total'=>(int)$t->fetchColumn()]);
+case 'run':
+  $p=auth($db,$in);$rid=bin2hex(random_bytes(12));
+  $db->prepare("DELETE FROM runs WHERE player=? AND ended IS NULL AND started<?")->execute([$p['id'],time()-6*3600]);
+  $db->prepare("INSERT INTO runs(rid,player,started) VALUES(?,?,?)")->execute([$rid,$p['id'],time()]);
+  out(['ok'=>true,'rid'=>$rid]);
+case 'defi':
+  $r=['ok'=>true,'start'=>DEFI_START,'end'=>DEFI_END,'now'=>time()];
+  $r['top']=$db->query("SELECT p.pseudo,p.city,s.value FROM scores s JOIN players p ON p.id=s.player WHERE s.mode='defi' AND s.period='d1' ORDER BY s.value DESC,s.at ASC LIMIT 30")->fetchAll(PDO::FETCH_ASSOC);
+  $r['total']=(int)$db->query("SELECT COUNT(*) FROM scores WHERE mode='defi' AND period='d1'")->fetchColumn();
+  $r['me']=null;
+  if(!empty($in['id'])&&preg_match('/^[a-f0-9]{16}$/',$in['id'])){
+    $q=$db->prepare("SELECT pseudo,city,created,save FROM players WHERE id=?");$q->execute([$in['id']]);$pl=$q->fetch(PDO::FETCH_ASSOC);
+    if($pl){$me=['pseudo'=>$pl['pseudo'],'city'=>$pl['city'],'created'=>(int)$pl['created'],'s1'=>s1done($pl['save']),'value'=>null,'rank'=>null];
+      $q=$db->prepare("SELECT value,at FROM scores WHERE player=? AND mode='defi' AND period='d1'");$q->execute([$in['id']]);$sc=$q->fetch(PDO::FETCH_ASSOC);
+      if($sc){$q=$db->prepare("SELECT COUNT(*) FROM scores WHERE mode='defi' AND period='d1' AND (value>? OR (value=? AND at<?))");$q->execute([$sc['value'],$sc['value'],$sc['at']]);$me['value']=(int)$sc['value'];$me['rank']=(int)$q->fetchColumn()+1;}
+      $q=$db->prepare("SELECT COUNT(*) FROM runs WHERE player=? AND ended IS NOT NULL AND started>=?");$q->execute([$in['id'],DEFI_START]);$me['parties']=(int)$q->fetchColumn();
+      $r['me']=$me;}
+  }
+  out($r);
+case 'joueur':
+  if(!hash_equals(ADMIN_HASH,hash('sha256',(string)($in['key']??''))))fail('clé invalide',403);
+  $s=mb_strtolower(trim((string)($in['q']??'')),'UTF-8');if($s==='')fail('pseudo vide');
+  $q=$db->prepare("SELECT id,pseudo,city,created,save,save_at FROM players WHERE pkey LIKE ? ORDER BY (pkey=?) DESC,created LIMIT 10");$q->execute(['%'.$s.'%',$s]);$L=[];
+  foreach($q->fetchAll(PDO::FETCH_ASSOC) as $i=>$pl){
+    $d=json_decode((string)$pl['save'],true)?:[];$ago=json_decode((string)($d['danxome_agojie']??''),true)?:[];
+    $j=['pseudo'=>$pl['pseudo'],'city'=>$pl['city'],'created'=>(int)$pl['created'],'save_at'=>(int)$pl['save_at'],'s1'=>s1done($pl['save']),'inf_save'=>(int)($ago['inf']??0),'parties_garde'=>(int)($ago['games']??0)];
+    $q2=$db->prepare("SELECT mode,period,value,at FROM scores WHERE player=? AND mode IN ('inf','defi')");$q2->execute([$pl['id']]);$j['scores']=$q2->fetchAll(PDO::FETCH_ASSOC);
+    if($i<3){$q2=$db->prepare("SELECT started,ended,value,s1,flag,waves FROM runs WHERE player=? ORDER BY started DESC LIMIT 300");$q2->execute([$pl['id']]);$j['parties']=$q2->fetchAll(PDO::FETCH_ASSOC);}
+    $L[]=$j;}
+  out(['ok'=>true,'joueurs'=>$L]);
 case 'save':
   $p=auth($db,$in);$d=(string)($in['data']??'');if(strlen($d)>300000)fail('sauvegarde trop grande');json_decode($d);if(json_last_error())fail('sauvegarde invalide');
   $db->prepare("UPDATE players SET save=?,save_at=? WHERE id=?")->execute([$d,time(),$p['id']]);out(['ok'=>true,'at'=>time()]);
@@ -114,6 +166,10 @@ case 'admin':
   $r['missions']=$db->query("SELECT k,ev,SUM(n) n FROM stats WHERE ev IN ('mission_start','mission_win','mission_loss','battle_win','battle_loss') GROUP BY k,ev ORDER BY k")->fetchAll(PDO::FETCH_ASSOC);
   $r['classement_inf']=$db->query("SELECT p.pseudo,p.city,s.value,s.at FROM scores s JOIN players p ON p.id=s.player WHERE s.mode='inf' ORDER BY s.value DESC,s.at ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
   $r['classement_jour']=$db->query("SELECT p.pseudo,p.city,s.value,s.period FROM scores s JOIN players p ON p.id=s.player WHERE s.mode='jour' AND s.period=(SELECT MAX(period) FROM scores WHERE mode='jour') ORDER BY s.value DESC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
+  $r['defi']=['start'=>DEFI_START,'end'=>DEFI_END];
+  $r['classement_defi']=$db->query("SELECT p.pseudo,p.city,s.value,s.at,(SELECT COUNT(*) FROM runs WHERE player=p.id AND started>=".DEFI_START." AND ended IS NOT NULL) parties,(SELECT COUNT(*) FROM runs WHERE player=p.id AND flag='trop_rapide') suspects FROM scores s JOIN players p ON p.id=s.player WHERE s.mode='defi' AND s.period='d1' ORDER BY s.value DESC,s.at ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
+  $r['parties_suspectes']=$db->query("SELECT p.pseudo,p.city,r.started,r.ended,r.value FROM runs r JOIN players p ON p.id=r.player WHERE r.flag='trop_rapide' ORDER BY r.started DESC LIMIT 50")->fetchAll(PDO::FETCH_ASSOC);
+  $r['parties_defi']=(int)$db->query("SELECT COUNT(*) FROM runs WHERE ended IS NOT NULL AND started>=".DEFI_START)->fetchColumn();
   // liste des joueurs : jamais le jeton ni le code de sauvegarde
   $r['liste']=$db->query("SELECT p.pseudo,p.city,p.created,p.save_at,(SELECT value FROM scores WHERE player=p.id AND mode='inf') inf,(SELECT COUNT(*) FROM scores WHERE player=p.id AND mode='jour') defis FROM players p ORDER BY p.created DESC LIMIT 5000")->fetchAll(PDO::FETCH_ASSOC);
   out($r);
