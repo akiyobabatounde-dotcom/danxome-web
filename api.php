@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS stats(day TEXT,ev TEXT,k TEXT,n INTEGER,PRIMARY KEY(d
 CREATE TABLE IF NOT EXISTS rate(h TEXT,m INTEGER,n INTEGER,PRIMARY KEY(h,m));
 CREATE TABLE IF NOT EXISTS runs(rid TEXT PRIMARY KEY,player TEXT,started INTEGER,ended INTEGER,value INTEGER,waves TEXT,s1 INTEGER,flag TEXT);
 CREATE INDEX IF NOT EXISTS runs_p ON runs(player,started);");
-// Défi 5 000 F : du ven. 27 nov. 2026 12h au dim. 6 déc. 2026 21h (heure du Bénin)
-const DEFI_START=1795777200;const DEFI_END=1796587200;const DEFI_MIN_S=8; // secondes minimum par vague
+// Défi 5 000 F : du ven. 27 nov. 2026 0h au dim. 6 déc. 2026 21h (heure du Bénin)
+const DEFI_START=1795734000;const DEFI_END=1796587200;const DEFI_MIN_S=8; // secondes minimum par vague
 function s1done($save){$d=json_decode((string)$save,true);if(!is_array($d))return false;$a=json_decode((string)($d['danxome_succes']??''),true);return is_array($a)&&!empty($a['saison']);}
 // limitation de débit : 90 requêtes par minute et par appareil (IP hachée, jamais stockée en clair)
 $m=intdiv(time(),60);$h=hash('sha256',($_SERVER['REMOTE_ADDR']??'').'|'.date('Y-m-d').'|danxome');
