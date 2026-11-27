@@ -88,6 +88,7 @@ case 'score':
         $flag='';
         if((int)$r['started']<DEFI_START||$now>DEFI_END)$flag='hors_periode';
         elseif(!$s1)$flag='saison1';
+        elseif(!isset($in['taps']))$flag='ancienne_version';
         elseif($bot)$flag='robot';
         elseif($v>0&&$dur<$v*DEFI_MIN_S)$flag='trop_rapide';
         $db->prepare("UPDATE runs SET ended=?,value=?,waves=?,s1=?,flag=?,taps=?,untr=?,wd=?,warn=? WHERE rid=?")->execute([$now,$v,json_encode($w),$s1?1:0,$flag,$taps,$untr,$wd,implode(' · ',array_merge($bot,$warn)),$rid]);

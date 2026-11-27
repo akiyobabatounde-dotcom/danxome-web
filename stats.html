@@ -119,7 +119,7 @@ function render(){
   $('miss').innerHTML='<tr><th>Mission</th><th class="n">Commencées</th><th class="n">Réussies</th><th class="n">Perdues</th><th class="n">Taux de réussite</th></tr>'+(Object.entries(M).map(([m,v])=>{const w=(v.mission_win||0)+(v.battle_win||0),l=(v.mission_loss||0)+(v.battle_loss||0);return `<tr><td>${esc(m||'—')}</td><td class="n">${v.mission_start||0}</td><td class="n">${w}</td><td class="n">${l}</td><td class="n">${w+l?Math.round(w/(w+l)*100)+' %':'—'}</td></tr>`}).join('')||'<tr><td colspan=5 class="mute">Pas encore de mission jouée.</td></tr>');
 }
 
-const FLAG={'':'<span class="ok">✅ comptée</span>',hors_periode:'<span class="mute">hors période</span>',saison1:'<span class="warn">Saison 1 non finie</span>',trop_rapide:'<span class="bad">⏱ trop rapide</span>',robot:'<span class="bad">🤖 robot</span>'};
+const FLAG={'':'<span class="ok">✅ comptée</span>',hors_periode:'<span class="mute">hors période</span>',saison1:'<span class="warn">Saison 1 non finie</span>',trop_rapide:'<span class="bad">⏱ trop rapide</span>',robot:'<span class="bad">🤖 robot</span>',ancienne_version:'<span class="mute">📦 ancienne version du jeu</span>'};
 const dur=s=>s==null?'—':(s>=3600?Math.floor(s/3600)+' h ':'')+Math.floor(s%3600/60)+' min '+String(s%60).padStart(2,'0')+' s';
 function defi(){
   const L=D.classement_defi||[],md=['🥇','🥈','🥉'],now=D.now,E=D.defi?D.defi.end:0,S=D.defi?D.defi.start:0;
