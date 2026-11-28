@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS rate(h TEXT,m INTEGER,n INTEGER,PRIMARY KEY(h,m));
 CREATE TABLE IF NOT EXISTS runs(rid TEXT PRIMARY KEY,player TEXT,started INTEGER,ended INTEGER,value INTEGER,waves TEXT,s1 INTEGER,flag TEXT);
 CREATE INDEX IF NOT EXISTS runs_p ON runs(player,started);");
 // Défi 5 000 F : du ven. 27 nov. 2026 0h au dim. 6 déc. 2026 21h (heure du Bénin)
+const ORGA=['bless','bless229','luxe229']; // comptes de l'organisateur : hors concours
 const DEFI_START=1795734000;const DEFI_END=1796587200;const DEFI_MIN_S=8; // secondes minimum par vague
 if(!in_array('iph',$db->query("PRAGMA table_info(runs)")->fetchAll(PDO::FETCH_COLUMN,1)))foreach(["ALTER TABLE runs ADD COLUMN wt TEXT","ALTER TABLE runs ADD COLUMN taps INTEGER","ALTER TABLE runs ADD COLUMN untr INTEGER","ALTER TABLE runs ADD COLUMN wd INTEGER","ALTER TABLE runs ADD COLUMN warn TEXT","ALTER TABLE runs ADD COLUMN iph TEXT","ALTER TABLE players ADD COLUMN iph TEXT"] as $sql){try{$db->exec($sql);}catch(Exception $e){}}
 function s1done($save){$d=json_decode((string)$save,true);if(!is_array($d))return false;$a=json_decode((string)($d['danxome_succes']??''),true);return is_array($a)&&!empty($a['saison']);}
@@ -81,13 +82,15 @@ case 'score':
         if($wd)$bot[]='navigateur automatisé';
         if($v>0&&$taps<$v)$bot[]='trop peu de vrais touchers ('.$taps.' pour '.$v.' vagues)';
         if($untr>3&&$untr>$taps/4)$bot[]='actions simulées par script ('.$untr.')';
-        if($v>1&&count($wt)<$v-1)$bot[]='vagues non vues par le serveur ('.count($wt).'/'.($v-1).')';
+        if($v>1&&count($wt)<floor(($v-1)*0.8))$bot[]='vagues non vues par le serveur ('.count($wt).'/'.($v-1).')';
+        elseif($v>1&&count($wt)<$v-1)$warn[]='vagues manquées, réseau ? ('.count($wt).'/'.($v-1).')';
         $gaps=[];$prev=0;foreach($wt as $t){$gaps[]=$t-$prev;$prev=$t;}
         if(count($gaps)>=3){$mn=min($gaps);if($mn<4)$warn[]='vague jouée en '.$mn.' s';}
         if(count($gaps)>=8){$avg=array_sum($gaps)/count($gaps);$var=0;foreach($gaps as $g)$var+=($g-$avg)*($g-$avg);$cv=$avg>0?sqrt($var/count($gaps))/$avg:0;if($cv<0.12)$warn[]='rythme trop régulier';}
         $flag='';
         if((int)$r['started']<DEFI_START||$now>DEFI_END)$flag='hors_periode';
         elseif(!$s1)$flag='saison1';
+        elseif(in_array($p['pkey'],ORGA,true))$flag='organisateur';
         elseif(!isset($in['taps']))$flag='ancienne_version';
         elseif($bot)$flag='robot';
         elseif($v>0&&$dur<$v*DEFI_MIN_S)$flag='trop_rapide';
@@ -105,7 +108,7 @@ case 'score':
 case 'top':
   $mode=(string)($in['mode']??'inf');$per=$mode==='inf'?'all':(string)($in['period']??'');$city=(string)($in['city']??'');$lim=max(1,min(50,(int)($in['limit']??20)));
   if(!in_array($mode,['inf','jour'],true))fail('mode inconnu');
-  $sql="SELECT p.pseudo,p.city,s.value FROM scores s JOIN players p ON p.id=s.player WHERE s.mode=? AND s.period=?";$args=[$mode,$per];
+  $sql="SELECT p.pseudo,p.city,s.value,(p.pkey IN ('".implode("','",ORGA)."')) orga FROM scores s JOIN players p ON p.id=s.player WHERE s.mode=? AND s.period=?";$args=[$mode,$per];
   if($city!==''){if(!in_array($city,CITIES,true))fail('Ville inconnue.');$sql.=" AND p.city=?";$args[]=$city;}
   $sql.=" ORDER BY s.value DESC,s.at ASC LIMIT $lim";$q=$db->prepare($sql);$q->execute($args);
   $me=null;
@@ -130,13 +133,14 @@ case 'wave':
   if(count($wt)<400&&$n===count($wt)+2){$wt[]=time()-(int)$r['started'];$db->prepare("UPDATE runs SET wt=? WHERE rid=?")->execute([json_encode($wt),$rid]);}
   out(['ok'=>true]);
 case 'defi':
+  $db->exec("DELETE FROM scores WHERE mode='defi' AND player IN (SELECT id FROM players WHERE pkey IN ('".implode("','",ORGA)."'))");
   $r=['ok'=>true,'start'=>DEFI_START,'end'=>DEFI_END,'now'=>time()];
   $r['top']=$db->query("SELECT p.pseudo,p.city,s.value FROM scores s JOIN players p ON p.id=s.player WHERE s.mode='defi' AND s.period='d1' ORDER BY s.value DESC,s.at ASC LIMIT 30")->fetchAll(PDO::FETCH_ASSOC);
   $r['total']=(int)$db->query("SELECT COUNT(*) FROM scores WHERE mode='defi' AND period='d1'")->fetchColumn();
   $r['me']=null;
   if(!empty($in['id'])&&preg_match('/^[a-f0-9]{16}$/',$in['id'])){
     $q=$db->prepare("SELECT pseudo,city,created,save FROM players WHERE id=?");$q->execute([$in['id']]);$pl=$q->fetch(PDO::FETCH_ASSOC);
-    if($pl){$me=['pseudo'=>$pl['pseudo'],'city'=>$pl['city'],'created'=>(int)$pl['created'],'s1'=>s1done($pl['save']),'value'=>null,'rank'=>null];
+    if($pl){$me=['orga'=>in_array(mb_strtolower($pl['pseudo'],'UTF-8'),ORGA,true),'pseudo'=>$pl['pseudo'],'city'=>$pl['city'],'created'=>(int)$pl['created'],'s1'=>s1done($pl['save']),'value'=>null,'rank'=>null];
       $q=$db->prepare("SELECT value,at FROM scores WHERE player=? AND mode='defi' AND period='d1'");$q->execute([$in['id']]);$sc=$q->fetch(PDO::FETCH_ASSOC);
       if($sc){$q=$db->prepare("SELECT COUNT(*) FROM scores WHERE mode='defi' AND period='d1' AND (value>? OR (value=? AND at<?))");$q->execute([$sc['value'],$sc['value'],$sc['at']]);$me['value']=(int)$sc['value'];$me['rank']=(int)$q->fetchColumn()+1;}
       $q=$db->prepare("SELECT COUNT(*) FROM runs WHERE player=? AND ended IS NOT NULL AND started>=?");$q->execute([$in['id'],DEFI_START]);$me['parties']=(int)$q->fetchColumn();
